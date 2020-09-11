@@ -128,6 +128,21 @@ const AhaMywork = GObject.registerClass(
       Main.panel.addToStatusArea(Me.metadata.uuid, this._button);
     }
 
+    _emptyMenuItem() {
+      let that = this;
+      let item = new PopupMenu.PopupBaseMenuItem({
+        style_class: "aha-item"
+      });
+      item.add_child(
+        new St.Label({
+          x_expand: true,
+          text: "Please configure the domain and token"
+        })
+      );
+      item.add_child(hbox);
+      return item;
+    }
+
     _menuItemMaker(ext) {
       let that = this;
       let item = new PopupMenu.PopupBaseMenuItem({
@@ -215,64 +230,68 @@ const AhaMywork = GObject.registerClass(
     _updateMenu() {
       this._button.menu.removeAll();
       let scroll = new PopupScrollMenu();
-      let url =
-        "https://" +
-        this.domain +
-        ".aha.io/api/v1/me/assigned?access_token=" +
-        this.token;
-      this.authUri = new Soup.URI(url);
-      this.authManager = new Soup.AuthManager();
-      if (this.httpSession) {
-        this.httpSession.abort();
-      } else {
-        this.httpSession = new Soup.Session();
-        this.httpSession.user_agent =
-          "gnome-shell-extension notification via libsoup";
+      if (this.domain != "") {
+        let url =
+          "https://" +
+          this.domain +
+          ".aha.io/api/v1/me/assigned?access_token=" +
+          this.token;
+        this.authUri = new Soup.URI(url);
+        this.authManager = new Soup.AuthManager();
+        if (this.httpSession) {
+          this.httpSession.abort();
+        } else {
+          this.httpSession = new Soup.Session();
+          this.httpSession.user_agent =
+            "gnome-shell-extension notification via libsoup";
 
-        Soup.Session.prototype.add_feature.call(
-          this.httpSession,
-          this.authManager
-        );
-      }
+          Soup.Session.prototype.add_feature.call(
+            this.httpSession,
+            this.authManager
+          );
+        }
 
-      let message = new Soup.Message({ method: "GET", uri: this.authUri });
-      this.httpSession.queue_message(
-        message,
-        Lang.bind(this, function(session, response) {
-          try {
-            if (response.status_code == 200 || response.status_code == 304) {
-              if (response.status_code == 200) {
-                let data = JSON.parse(response.response_body.data);
-                var i;
-                for (i = 0; i < data.assigned.length; i++) {
-                  let item = data.assigned[i];
-                  scroll.addMenuItem(this._menuItemMaker(item));
+        let message = new Soup.Message({ method: "GET", uri: this.authUri });
+        this.httpSession.queue_message(
+          message,
+          Lang.bind(this, function(session, response) {
+            try {
+              if (response.status_code == 200 || response.status_code == 304) {
+                if (response.status_code == 200) {
+                  let data = JSON.parse(response.response_body.data);
+                  var i;
+                  for (i = 0; i < data.assigned.length; i++) {
+                    let item = data.assigned[i];
+                    scroll.addMenuItem(this._menuItemMaker(item));
+                  }
                 }
+                return;
               }
-              return;
-            }
-            if (response.status_code == 401) {
-              error(
-                "Unauthorized. Check your domain and token in the settings"
-              );
-              return;
-            }
-            if (!response.response_body.data && response.status_code > 400) {
+              if (response.status_code == 401) {
+                error(
+                  "Unauthorized. Check your domain and token in the settings"
+                );
+                return;
+              }
+              if (!response.response_body.data && response.status_code > 400) {
+                error("HTTP error:" + response.status_code);
+                return;
+              }
+              // if we reach this point, none of the cases above have been triggered
+              // which likely means there was an error locally or on the network
+              // therefore we should try again in a while
               error("HTTP error:" + response.status_code);
+              error("response error: " + JSON.stringify(response));
+              return;
+            } catch (e) {
+              error("HTTP exception:" + e);
               return;
             }
-            // if we reach this point, none of the cases above have been triggered
-            // which likely means there was an error locally or on the network
-            // therefore we should try again in a while
-            error("HTTP error:" + response.status_code);
-            error("response error: " + JSON.stringify(response));
-            return;
-          } catch (e) {
-            error("HTTP exception:" + e);
-            return;
-          }
-        })
-      );
+          })
+        );
+      } else {
+        scroll.addMenuItem(this._emptyMenuItem());
+      }
       this._button.menu.addMenuItem(scroll);
       this._button.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(""));
       this._button.menu.addMenuItem(this._settingItem());
