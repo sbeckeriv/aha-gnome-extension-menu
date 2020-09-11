@@ -1,0 +1,11 @@
+{
+  "_generated": "aha",
+  "description": "aha",
+  "gettext-domain": "my-work",
+  "name": "My work (Aha)",
+  "settings-schema": "org.gnome.shell.extensions.my-work",
+  "shell-version": ["3.36"],
+  "url": "https://github.com/tuberry/extension-list",
+  "uuid": "aha@becker",
+  "version": 15
+}

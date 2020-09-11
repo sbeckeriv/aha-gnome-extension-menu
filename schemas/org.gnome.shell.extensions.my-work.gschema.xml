@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-shell-extensions-my-work">
+    <schema path="/org/gnome/shell/extensions/my-work/" id="org.gnome.shell.extensions.my-work">
+        <key type="s" name="domain">
+            <default>""</default>
+            <summary>Aha.io domain</summary>
+        </key>
+        <key type="s" name="token">
+            <default>""</default>
+            <summary>Aha Auth token</summary>
+        </key>
+    </schema>
+</schemalist>
